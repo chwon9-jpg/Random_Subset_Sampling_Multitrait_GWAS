@@ -1,0 +1,112 @@
+=============================================
+Toy run configuration and reference runtime
+=============================================
+
+This folder demonstrates the full p-values stage end to end on the toy
+outputs produced by sampling_script_toy_run.py (../sampling_method_expected_output/):
+compute_p_values/ computes the raw p-values, then contingency_table/ and
+qqplot/ summarize them. Use it to sanity-check your own setup before
+pointing the scripts at full-scale inputs.
+
+Date run : 2026-07-27
+
+
+1) compute_p_values/  (p_values_matrix_toy_run.py)
+=====================================================
+Copy of p_values/p_values_matrix.py.
+
+Input data (toy submatrices / upstream outputs)
+---------------------------------------------------
+z_path    : ../sampling_method_expected_output/Z_matrix.npy      (20,000 SNPs x 100 phenotypes)
+stat_path : ../sampling_method_expected_output/stat_matrix.dat   (10,000 x 20,000, float32)
+cor_path  : ../LDSC_toy_matrix.csv                                (100 x 100)
+save_path : ../sampling_method_expected_output/df_toy_allSNPs_allphenos.parquet
+
+Script configuration block (as run)
+------------------------------------
+N_WORKERS    = 8
+BLAS_THREADS = 1
+SNP_BATCH    = 5_000
+
+N_snps (from z_path)      = 20,000
+Np (from z_path)          = 100
+Ns (recovered from stat_path size) = 10,000
+
+Reported peak RAM (printed by the script) = 1.7 GB
+
+Runtime
+---------
+Parallel worker section (8 workers, printed by joblib):
+  Done 8 out of 8 | elapsed: 1.4s
+
+Loading the COR matrix / Cholesky decomposition and the final
+combine-and-save step are not separately timed by the script; total wall
+time for the whole run was well under a minute at this toy scale.
+
+Output files produced
+------------------------
+col1.dat, col2.dat, col3.dat : float64, 20,000 SNPs each, 160,000 B each
+                                (intermediate per-column memmaps)
+pvalue_matrix.csv            : snp_id, min_univariate_pval, joint_pval,
+                                min_subset_pval_bonf — 1.17 MB
+pvalue_matrix.npy            : (20000, 3) float64 stack of the same three
+                                columns — 480 KB
+
+
+2) contingency_table/  (contingency_table.py)
+=====================================================
+Reads compute_p_values/pvalue_matrix.npy and classifies each SNP by which
+of the three p-values (univariate, joint, min-subset Bonferroni) clear
+THRESHOLD = 5e-8, then prints a 3x3 count/proportion table.
+NOTE: base_dir at the top of the checked-in script is still the
+"/path/to/p_values" placeholder — point it at compute_p_values/ (or
+wherever pvalue_matrix.npy lives) before running.
+
+Runtime: effectively instant at this toy scale (single pass over a
+20,000-row array, no batching or parallelism).
+
+Output (contingency_table_output.txt, terminal output captured verbatim):
+------------------------------------------------------------------------
+Contingency table (count / proportion of all SNPs):
+                 Uni       Joint      Subsets
+Uni      10 (0.050%)  0 (0.000%)   2 (0.010%)
+Joint                 9 (0.045%)  50 (0.250%)
+Subsets                            4 (0.020%)
+
+All three significant:  38 (0.190%)
+None significant:       19,887 (99.435%)
+
+Total SNPs: 20,000
+
+
+3) qqplot/  (qqplot_20k_SNPs.py)
+=====================================================
+Reads compute_p_values/pvalue_matrix.npy and plots joint and min-subset
+-log10(p) against univariate -log10(p) for all 20,000 toy SNPs.
+NOTE: same out_dir placeholder issue as contingency_table.py above — point
+it at compute_p_values/ before running. The legend label "Joint (all 1010
+phenotypes)" is a leftover from the full-scale script; this toy run only
+used Np=100 phenotypes, so treat that label as describing the full-scale
+pipeline the toy is standing in for, not this specific run.
+
+x-axis is capped at ax.set_xlim(0, 40) (added on top of the original
+script) so the dense cluster of low-significance SNPs near the origin is
+visible instead of being compressed against the left edge by the handful
+of outliers reaching -log10(p) ~ 90.
+
+Runtime: effectively instant at this toy scale (single scatter plot over
+20,000 points).
+
+Output: qqplot_allSNPs.pdf (saved here as qqplot_20k_SNPs.pdf)
+
+
+Scaling notes for a full-scale run
+=====================================================
+col1/col2/col3 and pvalue_matrix scale with N_snps only (not Np, not Ns),
+so they stay modest even at full scale (~9.6M SNPs) compared to Z_matrix.npy
+or stat_matrix.dat. Peak RAM for compute_p_values scales with
+N_WORKERS * (SNP_BATCH * Np * 8 * 2 + Ns * SNP_BATCH * 4) bytes, so raise
+N_WORKERS/SNP_BATCH with care as Np and Ns grow. contingency_table.py and
+qqplot_20k_SNPs.py both load the full pvalue_matrix.npy into memory at
+once — at full scale (~9.6M SNPs x 3 columns x float64) that's roughly
+230 MB, still trivial, so no batching is needed for either at any scale.

@@ -1,0 +1,56 @@
+================================================================================
+Order to run these scripts
+================================================================================
+
+1. p_values_matrix.py     <- run this FIRST, produces pvalue_matrix.npy/.csv
+
+2. contingency_table.py   <- either or both, once pvalue_matrix.npy exists
+   qqplot_SNPs.py
+
+contingency_table.py and qqplot_SNPs.py both only read pvalue_matrix.npy from
+out_dir; they don't depend on each other and can run in any order (or skip
+one entirely) once step 1 has finished.
+
+================================================================================
+Before running any of these
+================================================================================
+
+p_values_matrix.py needs these already built:
+  - Z_matrix.npy               (from the sampling loop script)
+  - stat_matrix.dat            (from the sampling loop script)
+  - LDSC_intercept_matrix.csv  (tab-separated, "z_"-prefixed column names)
+  - a Parquet with an "ID" column + phenotype-name columns, in Z_matrix.npy's
+    column order (save_path)
+
+contingency_table.py and qqplot_SNPs.py only need pvalue_matrix.npy, produced
+by step 1 in the same out_dir.
+
+================================================================================
+Configuration notes
+================================================================================
+
+- p_values_matrix.py: N_WORKERS, BLAS_THREADS and SNP_BATCH are each
+  validated individually before anything else runs (before numpy/scipy are
+  even imported, since BLAS_THREADS sets the BLAS thread env vars): None, a
+  non-int (e.g. a float or string), or a non-positive value all fail
+  immediately with a message naming exactly which variable is wrong and why.
+- contingency_table.py and qqplot_SNPs.py have no equivalent numeric config
+  to validate — THRESHOLD already ships with a working default (5e-8, the
+  standard genome-wide-significance cutoff) rather than requiring the user
+  to set it.
+- save_path in p_values_matrix.py is optional: leave it as-is only if you
+  actually don't have SNP ID labels — SNP ids in the output then default to
+  plain row indices instead of real IDs.
+
+================================================================================
+Output
+================================================================================
+
+- pvalue_matrix.csv / .npy : per-SNP min univariate p-value, joint p-value
+  (+ n phenotypes observed), min subset p-value with per-SNP Bonferroni
+  correction (+ n subsets used).
+- contingency_table_output.txt : counts/proportions of SNPs significant
+  (THRESHOLD) under each combination of the three criteria above, in both
+  table and list form.
+- qqplot_allSNPs.pdf : joint and subset p-values vs. univariate p-value,
+  all SNPs.

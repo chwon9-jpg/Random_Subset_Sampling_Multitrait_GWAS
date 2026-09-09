@@ -1,0 +1,128 @@
+=============================================
+Toy run configuration and reference runtime
+=============================================
+
+This folder demonstrates the score_matrix stage end to end on the toy
+outputs produced by sampling_script_toy_run.py (../sampling_method_expected_output/):
+generate_score_matrix/ computes score_matrix.dat, then score_vs_|z|/ picks
+a single SNP and plots its per-phenotype score against |z| as a sanity
+check on the relationship between the two. Use it to sanity-check your own
+setup before pointing the scripts at full-scale inputs.
+
+Date run : 2026-07-27
+
+
+1) generate_score_matrix/  (generate_score_matrix_toy_run.py)
+=====================================================
+Copy of score_matrix/generate_score_matrix.py with the configuration block
+below filled in.
+
+Input data (upstream outputs)
+---------------------------------
+stat_path : ../sampling_method_expected_output/stat_matrix.dat (10,000 x 20,000, float32)
+sel_path  : ../sampling_method_expected_output/sel_matrix.npy  (10,000 x 100,    uint8)
+out_path  : score_matrix.dat (this folder)
+
+Script configuration block (as run)
+------------------------------------
+N_WORKERS    = 32
+BLAS_THREADS = 1
+SNP_BATCH    = 5_000
+
+Np (from sel_path)                 = 100
+Ns (from sel_path)                 = 10,000
+N_snps (recovered from stat_path size) = 20,000
+
+Reported by the script:
+  Peak RAM : 6 GB   (N_WORKERS * Ns * SNP_BATCH * 4 bytes)
+  Output   : 0.0 GB (N_snps * Np * 4 bytes = 8 MB, rounds to 0.0 in the script's GB print)
+
+Runtime
+---------
+Per-worker batches ranged 7.2s-10.6s (32 workers, 625 SNPs each).
+Parallel section (printed by joblib):
+  Done 32 out of 32 | elapsed: 10.9s finished
+Total wall time for the whole run (including sel_matrix load and memmap
+init) was on the order of ~15s at this toy scale.
+
+Partial verification and cleanup prompt (added after this reference run;
+printed by the script)
+---------------------------------------------------------------------------
+Once score_matrix.dat is written, the script samples 2,000 of the 20,000
+rows (all-zero-row and NaN check) and, if that passes, offers to delete
+stat_matrix.dat and sel_matrix.npy — they are only ever inputs to the
+matrix product above, never read again once score_matrix.dat exists. At
+full scale stat_matrix.dat is ~370 GB, which is the actual motivation for
+this prompt; at this toy scale it is only 0.8 GB. Answering anything other
+than y/yes (including no input at all, e.g. under sbatch with no attached
+terminal) leaves both files in place — deletion never happens silently.
+
+Running partial verification of score_matrix.dat...
+  sampled 2,000 of 20,000 rows
+  min=0.0062 max=321.2723 mean=2.1599
+  all-zero rows in sample : 0
+  NaNs in sample          : 0
+
+Partial check passed.
+stat_matrix.dat (0.8 GB) and sel_matrix.npy (1.0 MB) were only inputs to
+the matrix product above and are not needed again once score_matrix.dat
+exists.
+Delete stat_matrix.dat and sel_matrix.npy now? [y/N]: N
+Left stat_matrix.dat and sel_matrix.npy in place.
+
+                              OR, if answered "y":
+
+Delete stat_matrix.dat and sel_matrix.npy now? [y/N]: y
+Deleted ../sampling_method_expected_output/stat_matrix.dat
+Deleted ../sampling_method_expected_output/sel_matrix.npy
+
+NOTE: the two reference output files above (stat_matrix.dat, sel_matrix.npy
+in sampling_method_expected_output/) were kept, not deleted, for this
+reference run — they are the artifacts other RUN_CONFIG.txt files in this
+repo diff against, so answer "N" if reproducing this run.
+
+Output files produced
+------------------------
+score_matrix.dat : shape (20000, 100), float32, 8,000,000 B (8 MB)
+
+
+2) score_vs_|z|/  (plot_discordant_SNP.py)
+=====================================================
+Picks one random SNP (np.random.seed(17), N_snps=20_000) and scatters that
+single SNP's score against |z| across the 100 toy phenotypes, with an OLS
+fit line — a per-SNP check, not per-phenotype, despite the similar-looking
+scatter+OLS code as other plotting scripts in this repo.
+NOTE: score_path, z_path, parquet_path and out_path in the checked-in
+script are still "/path/to/..." placeholders — point them at
+../generate_score_matrix/score_matrix.dat,
+../../sampling_method_expected_output/Z_matrix.npy, and
+../../sampling_method_expected_output/df_toy_allSNPs_allphenos.parquet
+before running.
+
+Runtime: effectively instant at this toy scale (one memmap row lookup from
+each of score_matrix.dat and Z_matrix.npy, a 100-point OLS fit, one plot).
+
+Output (terminal output captured verbatim):
+--------------------------------------------
+Selected SNP index: 10,863
+SNP ID: rs35655466
+Saved → discordant_SNP_profile.png
+
+
+Scaling notes for a full-scale run
+=====================================================
+score_matrix.dat size = N_snps x Np x 4 bytes, independent of Ns — it scales
+the same way as Z_matrix.npy, so budget disk space accordingly at full scale
+(N_snps ~ 9.6M). Peak RAM instead scales with
+N_WORKERS * Ns * SNP_BATCH * 4 bytes, driven by Ns and SNP_BATCH rather than
+N_snps or Np, so lower SNP_BATCH first if a full-scale run runs out of memory.
+plot_discordant_SNP.py stays cheap at any scale — it only ever reads a
+single row out of each memmap, regardless of N_snps.
+The partial-verification sample size (2,000 rows here) is small relative to
+N_snps at any scale and stays cheap even at full scale (~9.6M SNPs) — see
+Full_scale_run/score_matrix/Compute_score_matrix.py, which uses a larger
+sample (50,000 rows) simply because the far larger row count there makes
+that still a small, cheap fraction. The deletion prompt is where this
+matters most at full scale: stat_matrix.dat is ~370 GB there (vs. 0.8 GB
+here), so confirming score_matrix.dat is good before freeing that space is
+the main point of the check, not an afterthought.

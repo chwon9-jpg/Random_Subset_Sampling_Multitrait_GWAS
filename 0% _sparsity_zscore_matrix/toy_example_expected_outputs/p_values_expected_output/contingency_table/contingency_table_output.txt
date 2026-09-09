@@ -1,0 +1,36 @@
+'''
+
+Output from the terminal:
+
+============================================================
+Contingency table (count / proportion of all SNPs):
+                 Uni       Joint      Subsets
+Uni      10 (0.050%)  0 (0.000%)   2 (0.010%)
+Joint                 9 (0.045%)  50 (0.250%)
+Subsets                            4 (0.020%)
+
+All three significant:  38 (0.190%)
+None significant:       19,887 (99.435%)
+
+Total SNPs: 20,000
+============================================================
+
+                        OR
+
+===================================================
+Alternative Output (same values, different format):
+
+       Category   Count      Proportion (%)
+           None   19,887        99.435
+       Uni only      10          0.050
+     Joint only       9          0.045
+   Subsets only       4          0.020
+    Uni + Joint       0          0.000
+  Uni + Subsets       2          0.010
+Joint + Subsets      50          0.250
+      All three      38          0.190    
+
+Total SNPs: 20,000
+================================================== 
+
+'''

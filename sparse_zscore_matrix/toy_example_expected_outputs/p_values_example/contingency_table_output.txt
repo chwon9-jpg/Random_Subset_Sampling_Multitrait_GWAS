@@ -1,0 +1,28 @@
+Contingency table (count / proportion of all SNPs):
+                  Uni           Joint          Subsets
+Uni      250 (1.250%)     66 (0.330%)      26 (0.130%)
+Joint                  1,054 (5.270%)  8,542 (42.710%)
+Subsets                                     2 (0.010%)
+
+All three significant:  1,757 (8.785%)
+None significant:       8,303 (41.515%)
+
+Total SNPs: 20,000
+
+Same counts, list style:
+       Category Count Proportion (%)
+           None 8,303         41.515
+       Uni only   250          1.250
+     Joint only 1,054          5.270
+   Subsets only     2          0.010
+    Uni + Joint    66          0.330
+  Uni + Subsets    26          0.130
+Joint + Subsets 8,542         42.710
+      All three 1,757          8.785
+
+Total SNPs: 20,000
+
+Untested (NaN) per criterion -- folded into 'not significant' above, reported separately here:
+  Uni untested:     0 (0.0000%)
+  Joint untested:   0 (0.0000%)
+  Subsets untested: 101 (0.5050%)

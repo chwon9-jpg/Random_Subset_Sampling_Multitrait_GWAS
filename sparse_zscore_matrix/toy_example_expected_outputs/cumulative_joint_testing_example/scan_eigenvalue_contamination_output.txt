@@ -1,0 +1,35 @@
+Loading LDSC matrix...
+  COR min eigenvalue = -0.017035 -> using RIDGE = 0.017135
+Loading null parquet to recover the empirical significance threshold...
+  null max peak_log10p = 11.594
+Loading corrected parquet and filtering to hits...
+  10,620 hits
+Scanning 10,620 hits across 16 workers...
+  2,000 / 10,620  (0s)
+  4,000 / 10,620  (1s)
+  6,000 / 10,620  (1s)
+  8,000 / 10,620  (1s)
+  10,000 / 10,620  (1s)
+
+Saved -> /pasteur/helix/projects/GGS_CONNECT/WKD_CHRISTOPHER/toy_example_expected_outputs/sparse_zscore_matrix/cumulative_joint_testing/eigenvalue_contamination_scan.parquet
+
+=== SUMMARY ===
+Contaminated (frac_small > 0.5): 8,877 / 10,620 (83.59%)
+  frac_small p50: 0.753
+  frac_small p75: 0.850
+  frac_small p90: 0.905
+  frac_small p95: 0.928
+  frac_small p99: 0.954
+  frac_small p100: 0.981
+
+Contamination rate by peak_k band:
+  k in [  0, 10):      3 /     84 contaminated (3.6%)
+  k in [ 10, 30):     51 /    717 contaminated (7.1%)
+  k in [ 30, 50):    314 /    799 contaminated (39.3%)
+  k in [ 50, 65):    364 /    625 contaminated (58.2%)
+  k in [ 65, 75):  1,278 /  1,427 contaminated (89.6%)
+  k in [ 75, 79):  6,867 /  6,968 contaminated (98.6%)
+
+Total time: 0.0 minutes
+
+Log saved -> /pasteur/helix/projects/GGS_CONNECT/WKD_CHRISTOPHER/toy_example_expected_outputs/sparse_zscore_matrix/cumulative_joint_testing/scan_eigenvalue_contamination_output.txt

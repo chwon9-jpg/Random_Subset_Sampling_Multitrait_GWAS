@@ -1,0 +1,153 @@
+Loading LDSC matrix, phenotype columns, and corrected output parquet...
+Full 78x78 Sigma: min eigenvalue = -0.017035  ->  RIDGE = 0.017135 (matches what the real pipeline run used)
+
+Full 78x78 LDSC matrix: min eigenvalue = -1.7035e-02, max = 7.01, condition number = 4.115e+02
+  eigenvalues below 1e-2: 1 of 78
+
+Top 3 most extreme SNPs by peak_log10p:
+  row_idx=15204      peak_k=77   peak_log10p=    6146.554  was_fallback_corrected=True
+  row_idx=4828       peak_k=77   peak_log10p=    1945.193  was_fallback_corrected=True
+  row_idx=8481       peak_k=78   peak_log10p=    1759.039  was_fallback_corrected=True
+
+========================================================================
+row_idx=15204   peak_k=77
+  reported peak -log10(p) = 6146.554   was_fallback_corrected = True
+========================================================================
+  jointly-observed phenotypes for this SNP: 78 of 78
+
+1. MARGINAL z-SCORES (within the peak subset of 77 phenotypes)
+   max|z|          = 38.3895
+   mean|z|         = 2.4476
+   |z| > 1.96      = 20 of 77 (expected ~4 under H0)
+   |z| > 5.45     = 9  (genome-wide univariate threshold)
+   sum z^2         = 2441.4   (expected ~77 if z ~ N(0,I))
+   ratio to expect = 31.71x
+
+2. JOINT STATISTIC
+   subset eigenvalues: min=1.0064e-04, max=6.96
+   S = ||L^-1 z||^2  = 28821.8   (expected ~77 under H0)
+   inflation S/k     = 374.31x
+   for reference, sum z^2 / k = 31.71x
+   -> the joint test amplifies the raw signal by a further 11.81x
+
+3. CONCENTRATION OF S ACROSS ITS 77 COMPONENTS
+   largest single component : 7040.4  (24.4% of S)
+   top 5 components         : 54.5% of S
+   top 10 components        : 71.0% of S
+   under H0, the largest of 77 chi2_1 draws is typically ~8.7
+   -> largest component is 810.4x that
+
+4. AMPLIFICATION BY EIGEN-DIRECTION
+   contribution of direction i to S is (v_i . z)^2 / lambda_i
+   rank       lambda      (v.z)^2      contrib   % of S
+      0   1.0064e-04       2.7033      26860.4    93.2%
+      1   7.0808e-01     268.8505        379.7     1.3%
+      2   2.3547e+00     398.8623        169.4     0.6%
+      3   3.7289e-02       5.1209        137.3     0.5%
+      4   1.2848e+00     152.4758        118.7     0.4%
+
+   directions with lambda < 1e-2: 1 of 77, contributing 93.2% of S
+   (if these few directions carry a large share of S, the statistic
+    is driven by near-degenerate directions rather than by broad signal)
+
+5. PHENOTYPES LOADING MOST HEAVILY ON THE SMALLEST EIGEN-DIRECTION (lambda=1.0064e-04)
+   BIOMARKERS_LDL_DIRECT                                   loading=+0.763
+   BIOMARKERS_CHOLESTEROL                                  loading=-0.577
+   BIOMARKERS_APOLIPOPROTEIN_B                             loading=-0.225
+   BIOMARKERS_HDL_CHOLESTEROL                              loading=+0.160
+
+========================================================================
+row_idx=4828   peak_k=77
+  reported peak -log10(p) = 1945.193   was_fallback_corrected = True
+========================================================================
+  jointly-observed phenotypes for this SNP: 77 of 78
+
+1. MARGINAL z-SCORES (within the peak subset of 77 phenotypes)
+   max|z|          = 21.0608
+   mean|z|         = 4.0589
+   |z| > 1.96      = 40 of 77 (expected ~4 under H0)
+   |z| > 5.45     = 21  (genome-wide univariate threshold)
+   sum z^2         = 2929.8   (expected ~77 if z ~ N(0,I))
+   ratio to expect = 38.05x
+
+2. JOINT STATISTIC
+   subset eigenvalues: min=1.1251e-04, max=6.95
+   S = ||L^-1 z||^2  = 9389.7   (expected ~77 under H0)
+   inflation S/k     = 121.94x
+   for reference, sum z^2 / k = 38.05x
+   -> the joint test amplifies the raw signal by a further 3.20x
+
+3. CONCENTRATION OF S ACROSS ITS 77 COMPONENTS
+   largest single component : 3665.5  (39.0% of S)
+   top 5 components         : 65.8% of S
+   top 10 components        : 79.2% of S
+   under H0, the largest of 77 chi2_1 draws is typically ~8.7
+   -> largest component is 421.9x that
+
+4. AMPLIFICATION BY EIGEN-DIRECTION
+   contribution of direction i to S is (v_i . z)^2 / lambda_i
+   rank       lambda      (v.z)^2      contrib   % of S
+      0   1.1251e-04       0.8416       7480.5    79.7%
+      1   4.8813e+00    1074.3243        220.1     2.3%
+      2   5.8280e-01      88.3359        151.6     1.6%
+      3   6.0697e-01      89.0050        146.6     1.6%
+      4   7.6714e-01      99.0685        129.1     1.4%
+
+   directions with lambda < 1e-2: 1 of 77, contributing 79.7% of S
+   (if these few directions carry a large share of S, the statistic
+    is driven by near-degenerate directions rather than by broad signal)
+
+5. PHENOTYPES LOADING MOST HEAVILY ON THE SMALLEST EIGEN-DIRECTION (lambda=1.1251e-04)
+   BIOMARKERS_LDL_DIRECT                                   loading=+0.764
+   BIOMARKERS_CHOLESTEROL                                  loading=-0.577
+   BIOMARKERS_APOLIPOPROTEIN_B                             loading=-0.225
+   BIOMARKERS_HDL_CHOLESTEROL                              loading=+0.160
+
+========================================================================
+row_idx=8481   peak_k=78
+  reported peak -log10(p) = 1759.039   was_fallback_corrected = True
+========================================================================
+  jointly-observed phenotypes for this SNP: 78 of 78
+
+1. MARGINAL z-SCORES (within the peak subset of 78 phenotypes)
+   max|z|          = 13.6374
+   mean|z|         = 1.4590
+   |z| > 1.96      = 12 of 78 (expected ~4 under H0)
+   |z| > 5.45     = 3  (genome-wide univariate threshold)
+   sum z^2         = 489.3   (expected ~78 if z ~ N(0,I))
+   ratio to expect = 6.27x
+
+2. JOINT STATISTIC
+   subset eigenvalues: min=1.0000e-04, max=7.03
+   S = ||L^-1 z||^2  = 8530.0   (expected ~78 under H0)
+   inflation S/k     = 109.36x
+   for reference, sum z^2 / k = 6.27x
+   -> the joint test amplifies the raw signal by a further 17.43x
+
+3. CONCENTRATION OF S ACROSS ITS 78 COMPONENTS
+   largest single component : 955.2  (11.2% of S)
+   top 5 components         : 41.0% of S
+   top 10 components        : 64.8% of S
+   under H0, the largest of 78 chi2_1 draws is typically ~8.7
+   -> largest component is 109.6x that
+
+4. AMPLIFICATION BY EIGEN-DIRECTION
+   contribution of direction i to S is (v_i . z)^2 / lambda_i
+   rank       lambda      (v.z)^2      contrib   % of S
+      0   1.0000e-04       0.8200       8199.6    96.1%
+      1   8.0021e-02       6.2294         77.8     0.9%
+      2   2.3668e+00      71.9217         30.4     0.4%
+      3   1.2898e+00      26.0029         20.2     0.2%
+      4   7.0274e+00     113.0173         16.1     0.2%
+
+   directions with lambda < 1e-2: 1 of 78, contributing 96.1% of S
+   (if these few directions carry a large share of S, the statistic
+    is driven by near-degenerate directions rather than by broad signal)
+
+5. PHENOTYPES LOADING MOST HEAVILY ON THE SMALLEST EIGEN-DIRECTION (lambda=1.0000e-04)
+   BIOMARKERS_LDL_DIRECT                                   loading=+0.763
+   BIOMARKERS_CHOLESTEROL                                  loading=-0.577
+   BIOMARKERS_APOLIPOPROTEIN_B                             loading=-0.225
+   BIOMARKERS_HDL_CHOLESTEROL                              loading=+0.160
+
+Log saved -> /pasteur/helix/projects/GGS_CONNECT/WKD_CHRISTOPHER/toy_example_expected_outputs/sparse_zscore_matrix/cumulative_joint_testing/inspect_large_k_snps_output.txt

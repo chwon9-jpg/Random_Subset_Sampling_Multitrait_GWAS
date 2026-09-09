@@ -1,0 +1,126 @@
+================================================================================
+Order to run these scripts
+================================================================================
+
+Step 1. cumulative_joint_test_null_pipeline.py          <- run this FIRST
+
+Step 2. cumulative_joint_test_pipeline_3panelfigure.py  <- pick ONE of these two
+   OR
+   cumulative_joint_test_pipeline_table.py
+
+The two real-data scripts share the same stage 1 (real cumulative joint test)
+and stage 2 (fallback correction); they only differ in stage 3 (figure vs.
+table output). Run whichever one you need or run both.
+
+The null script isn't a hard prerequisite (the real scripts check for its
+output parquet and skip calibration if it's missing), but running it first is
+the actual point of this pipeline: without it you get peak-k statistics with
+no reference for which of them beat pure noise.
+
+Step 3. Diagnostics (optional), run after step 2, none required by anything else
+   in this folder:
+
+   - inspect_large_k_snps.py: standalone single-SNP diagnostic. Only needs
+     step 2's cumulative_joint_test_real_corrected.parquet (either variant;
+     both write it), plus the same Z_matrix.npy / score_matrix.dat / LDSC
+     matrix / phenotype parquet everything else uses. Auto-identifies its
+     own TOP_N most extreme SNPs by peak_log10p from the corrected parquet
+     (sorting non-NaN rows), instead of requiring them hand-picked and
+     hardcoded.
+
+   - scan_eigenvalue_contamination.py: extends inspect_large_k_snps.py's
+     per-SNP eigen-direction check to every SNP clearing the null threshold,
+     not just a handful. Needs step 1's cumulative_joint_test_null.parquet
+     and step 2's corrected parquet (either variant). Writes eigenvalue_contamination_scan.parquet.
+
+   - qqplot_optimal_subset_vs_univariate.py: compares univariate, joint, and
+     optimal-subset -log10(p) across all SNPs. Needs the TABLE variant's
+     final_output_table.parquet specifically (the figure variant doesn't
+     produce that file), scan_eigenvalue_contamination.py's output above,
+     and pvalue_matrix.npy from the p_values/ stage (a different folder,
+     not produced anywhere in this one). Writes qqplot_optimal_subset_vs_univariate.png.
+
+================================================================================
+Before running any of these
+================================================================================
+
+All three pipeline scripts and inspect_large_k_snps.py /
+scan_eigenvalue_contamination.py need these already built:
+  - Z_matrix.npy        (from the sampling loop script)
+  - score_matrix.dat    (from the score-matrix script)
+  - a Parquet with an "ID" column + phenotype-name columns, in Z_matrix.npy's
+    column order (save_path)
+  - LDSC_intercept_matrix.csv (tab-separated, "z_"-prefixed column names)
+
+qqplot_optimal_subset_vs_univariate.py is the exception: it doesn't touch
+score_matrix.dat, the phenotype parquet, or the LDSC matrix at all -- only
+final_output_table.parquet, cumulative_joint_test_null.parquet,
+eigenvalue_contamination_scan.parquet, and pvalue_matrix.npy (from
+p_values/p_values_matrix.py, a different folder).
+
+The null script generates its own null_Z_T.npy / null_stat_matrix.dat /
+null_score_matrix.dat internally.
+
+================================================================================
+Configuration notes
+================================================================================
+
+- All "User to define None" values in every script here (N_WORKERS
+  everywhere multiprocessing is used -- both real-data scripts, the null
+  script, and scan_eigenvalue_contamination.py; Ns, N_CHUNKS, SNP_BATCH and
+  SCORE_SNP_BATCH in the null script; KEEP_EVERY in the figure script;
+  KEEP_EVERY and CHUNK in the table script; TOP_N in
+  inspect_large_k_snps.py) are validated individually before anything else
+  runs: None, a non-int (e.g. a float or string), or a non-positive value
+  all fail immediately with a message naming exactly which variable is
+  wrong and why. N_WORKERS is checked first in every script that has it,
+  since it's read before numpy/scipy/polars are imported (it also sets
+  POLARS_MAX_THREADS).
+- N_snps is NOT a "User to define" value anywhere in this folder anymore.
+  The null script derives it directly from the real Z_matrix.npy's row
+  count (matching it exactly gives the tightest calibration resolution,
+  1/(N_snps+1)); every other script here derives it the same way from its
+  own z_path, or from save_path's row/column count.
+- N_WORKERS_CJT (null script only) defaults to N_WORKERS // 2 (Stage D is
+  process-based via mp.Pool, unlike Stage B's threads); lower it if
+  memory-constrained, don't raise it past N_WORKERS. Note N_WORKERS=1 would
+  floor this to 0, which is why it gets its own validation check rather than
+  inheriting N_WORKERS's.
+- Null script: Ns, N_CHUNKS, N_WORKERS_SUB and SNP_BATCH should mirror
+  whatever the real sampling loop script used, for an apples-to-apples
+  subset draw.
+- MIN_CLEAN_STREAK (both real-data scripts) rarely needs changing from 100. I
+  It's an adaptive stopping rule for stage 2's fallback correction, not a
+  fixed guess. See the comment above it in either script for why that
+  matters.
+- inspect_large_k_snps.py's TOP_N replaces what used to be a hardcoded
+  TARGETS list of manually-identified row_idx/peak_k pairs. Note this is a
+  behavior change, not just a refactor: the old hardcoded list was
+  hand-curated to span both fallback-corrected and exactly-computed peak
+  values, for methodological coverage; a plain "top TOP_N by peak_log10p"
+  sort has no way to guarantee that same mix on a new dataset.
+- scan_eigenvalue_contamination.py and CONTAM_FRAC (0.5) / SMALL_EV (1e-2)
+  are the same threshold and metric inspect_large_k_snps.py's per-SNP
+  breakdown uses (frac_small = fraction of a SNP's joint statistic S coming
+  from eigen-directions with eigenvalue < SMALL_EV); the two are meant to be
+  read together -- inspect_large_k_snps.py for the full per-direction detail
+  on a handful of SNPs, scan_eigenvalue_contamination.py for the same flag
+  applied at scale.
+- scan_eigenvalue_contamination.py's hit filter explicitly guards against
+  NaN peak_log10p (SNPs with zero jointly-observed phenotypes) with
+  is_not_nan() before comparing to the null threshold. This matters because
+  Polars' `>` does not use IEEE-754 NaN semantics the way numpy's does --
+  a bare `pl.col("peak_log10p") > null_max` silently pulls NaN rows into
+  the "hits" set, which would then crash the eigendecomposition on a
+  zero-length subset. inspect_large_k_snps.py's TOP_N selection has the
+  same guard for the same reason.
+- scan_eigenvalue_contamination.py and inspect_large_k_snps.py both save
+  their own console output to a matching *_output.txt file in base_out (via
+  a small _Tee class), in addition to printing normally.
+  qqplot_optimal_subset_vs_univariate.py does not -- it only writes its
+  figure.
+- The null pipeline's Stage B (sampling loop) is the slow part of all this;
+  everything else in all three pipeline scripts finishes quickly by
+  comparison. The three diagnostic scripts are fast too --
+  scan_eigenvalue_contamination.py is the heaviest of the three, but it's
+  still one eigendecomposition per hit, not per SNP in the dataset.

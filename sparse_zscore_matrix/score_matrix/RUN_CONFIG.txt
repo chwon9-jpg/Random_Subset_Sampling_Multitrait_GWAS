@@ -1,0 +1,55 @@
+================================================================================
+Order to run these scripts
+================================================================================
+
+1. generate_score_matrix.py  <- run this FIRST, produces score_matrix.dat
+
+2. plot_discordant_SNP.py    <- optional, once score_matrix.dat exists
+
+plot_discordant_SNP.py is a spot-check: it picks one random SNP (seeded) and
+plots that SNP's per-phenotype score against |z|, as a quick sanity look at
+score_matrix.dat rather than a pipeline dependency for later stages.
+
+================================================================================
+Before running any of these
+================================================================================
+
+generate_score_matrix.py needs these already built:
+  - stat_matrix.dat  (from the sampling loop script)
+  - sel_matrix.npy   (from the sampling loop script)
+
+plot_discordant_SNP.py needs these already built:
+  - score_matrix.dat            (from generate_score_matrix.py, step 1)
+  - Z_matrix.npy                (from the sampling loop script)
+  - a Parquet with an "ID" column + phenotype-name columns, in Z_matrix.npy's
+    column order (save_path)
+
+================================================================================
+Configuration notes
+================================================================================
+
+- generate_score_matrix.py: N_WORKERS, BLAS_THREADS, SNP_BATCH and
+  VERIFY_N_SAMPLE are each validated individually before anything else runs
+  (before numpy is even imported, since BLAS_THREADS sets the BLAS thread
+  env vars): None, a non-int (e.g. a float or string), or a non-positive
+  value all fail immediately with a message naming exactly which variable is
+  wrong and why.
+- VERIFY_N_SAMPLE controls the post-run partial verification (a random
+  sample of rows checked for all-zero/all-NaN scores) — it should be large
+  enough to catch a broken run but doesn't need to be huge; it's capped at
+  N_snps automatically if you set it larger than the dataset.
+- After the partial check passes, the script offers to delete
+  stat_matrix.dat and sel_matrix.npy interactively (they're only inputs to
+  score_matrix.dat and aren't needed again). Under sbatch/no TTY it defaults
+  to NOT deleting them — delete by hand if you're sure.
+- plot_discordant_SNP.py has no equivalent numeric config to validate; the
+  SNP index is picked via a fixed seed (7), not user-set.
+
+================================================================================
+Output
+================================================================================
+
+- score_matrix.dat          : (N_snps, Np) float32, memory-mapped. NaN where
+  a phenotype was never drawn in any subset containing that SNP.
+- score_matrix_SNProw{idx}.png : scatter of one SNP's per-phenotype score vs.
+  |z|, with an OLS fit line — idx is embedded in the filename.

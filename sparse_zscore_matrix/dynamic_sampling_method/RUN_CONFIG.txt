@@ -1,0 +1,50 @@
+================================================================================
+What this script needs before you run it
+================================================================================
+
+- {base_dir}/Z_matrix.npy                  : z-score matrix, (N_snps, Np),
+                                              NaN for missing entries.
+- {base_dir}/df_allSNPs_allphenos.parquet  : "ID" column + phenotype-name
+                                              columns, same order as Z_matrix's
+                                              columns (save_path).
+- {base_dir}/LDSC_intercept_matrix.csv     : tab-separated, "z_"-prefixed
+                                              phenotype names (cor_path).
+
+If you're starting from a plain-text z-score file, convert_zscore_to_npy.py
+(repo root) produces the .npy AND the Parquet together in one pass.
+
+All three files must already sit together in base_dir with these exact
+names before this script will find them.
+
+================================================================================
+Configuration notes
+================================================================================
+
+- n_workers, n_chunks, SNP_BATCH are each validated individually before
+  anything else runs: None, a non-int (e.g. a float or string), or a
+  non-positive value all fail immediately with a message naming exactly
+  which variable is wrong and why — not just a generic "set these three".
+- n_chunks is NOT a free tuning knob: one random seed is spawned per chunk,
+  so changing n_chunks changes which subsets get drawn. Hold it fixed to
+  reproduce a run; vary n_workers freely instead.
+- Ns (the number of subsets) is NOT something you set directly — it's
+  computed from the z-matrix's own measured missingness (sparser data draws
+  more subsets for a stable null) and printed at runtime. SPARSITY_LOW/HIGH
+  and FACTOR_LOW/HIGH control that scaling if you need to adjust it, but the
+  defaults are reasonable for most datasets.
+- A ridge is added to the LDSC matrix automatically if its minimum
+  eigenvalue sits below RIDGE_MARGIN (1e-4) — you'll see a printed line if
+  this triggers; no action needed on your part either way.
+
+================================================================================
+Output
+================================================================================
+
+- stat_matrix.dat  : (Ns, N_snps) float32, memory-mapped. NaN wherever a SNP
+                      was excluded from a subset (missing a phenotype that
+                      subset drew).
+- sel_matrix.npy   : (Ns, Np) uint8 — 1 if a phenotype was drawn in that
+                      subset, else 0.
+- n_snp_used.npy   : (Ns,) int32 — how many SNPs actually survived the
+                      missingness filter in each subset (varies per subset;
+                      not the same as N_snps).

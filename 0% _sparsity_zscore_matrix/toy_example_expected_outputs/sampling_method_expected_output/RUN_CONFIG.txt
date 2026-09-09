@@ -1,0 +1,60 @@
+=============================================
+Toy run configuration and reference runtime
+=============================================
+This toy run demonstrates sampling_script_toy_run.py end to end on a small,
+size-capped subset of the full-scale data. Use it to sanity-check your own
+setup before pointing the script at full-scale inputs.
+
+Date run       : 2026-07-27
+Script         : sampling_script_toy_run.py (copy of Fullscale_sampling_loop.py
+                 with the configuration block below pre-filled)
+
+Input data (toy submatrices)
+-----------------------------
+Z_matrix.npy                    : 20,000 SNPs x 100 phenotypes, float32 (8.0 MB)
+df_toy_allSNPs_allphenos.parquet: same 20,000 SNPs, ID + 100 phenotype columns (7.5 MB)
+LDSC_toy_matrix.csv             : 100 x 100 LDSC intercept submatrix (76 KB)
+
+Toy data was drawn from the full-scale files with numpy seed=42:
+  - 100 of 1010 phenotypes chosen at random (rng.choice, no replacement)
+  - 20,000 of 9,611,261 SNPs chosen at random across the genome (not a
+    contiguous block, since the source parquet is not SNP-order-random)
+  - Phenotype order is identical across all three files, and SNP row order
+    is identical between Z_matrix.npy and the parquet.
+Note: 100 phenotypes is the practical floor here, not an arbitrary choice —
+the script draws subset sizes k = randint(5, 91) each iteration, so Np must
+stay >= 90 or rng.choice(Np, k, replace=False) will eventually fail.
+
+Script configuration block (as run)
+------------------------------------
+n_workers  = 8
+n_chunks   = 16
+SNP_BATCH  = 5_000
+base_dir   = toy_run_sampling_0%_sparsity/
+save_path  = df_toy_allSNPs_allphenos.parquet
+cor_path   = LDSC_toy_matrix.csv
+
+Ns (hardcoded in script) = 10,000 subsets drawn
+N_snps (from data)       = 20,000
+Np (from data)           = 100
+
+Machine used for this reference run
+--------------------------------------
+128 CPU cores available, 754 GiB RAM (n_workers=8 uses a small fraction of both)
+
+Runtime
+---------
+real  1m55.7s
+user  14m57.8s   (sum across the 8 worker threads)
+sys   0m0.7s
+
+Output files produced
+------------------------
+stat_matrix.dat : shape (10000, 20000), float32, 763 MB
+sel_matrix.npy  : shape (10000, 100),   uint8,     977 KB
+
+Scaling notes for a full-scale run
+--------------------------------------
+stat_matrix.dat size = Ns x N_snps x 4 bytes, independent of Np. Ns=10,000 is
+fixed by the script, so file size scales linearly with N_snps only. At
+full scale (N_snps ~ 9.6M) this file approx. 360 GB, which is why it is not checked into the repo.
