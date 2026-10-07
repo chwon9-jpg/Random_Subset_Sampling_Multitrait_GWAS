@@ -6,6 +6,9 @@ GWAS: A Scalable Alternative to Exhaustive Phenotype Testing*
 Institut Pasteur. It contains the code for the full pipeline, applied to 1,010
 brain MRI GWAS from the UK Biobank (9,611,261 SNPs).
 
+For a detailed report covering the background, the staged scale-up from a pilot to the 
+full-scale run, the downstream analysis and the mathematical derivations, see [`report.pdf`](report.pdf)
+
 **Headline results** (full-scale run, all 1,010 phenotypes):
 
 - **666 SNPs** are significant under subset-based testing alone, i.e. missed by
@@ -50,7 +53,7 @@ The method implemented here instead:
    procedure alone.
 
 
-## Results at a glance
+## Results
 
 ### Joint and subset-based tests vs. the univariate test
 
