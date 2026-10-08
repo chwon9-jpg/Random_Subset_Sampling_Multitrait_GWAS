@@ -6,8 +6,14 @@ GWAS: A Scalable Alternative to Exhaustive Phenotype Testing*
 Institut Pasteur. It contains the code for the full pipeline, applied to 1,010
 brain MRI GWAS from the UK Biobank (9,611,261 SNPs).
 
-For a detailed report covering the background, the staged scale-up from a pilot to the 
-full-scale run, the downstream analysis and the mathematical derivations, see [`report.pdf`](report.pdf)
+For a detailed report covering the background, the staged scale-up from a pilot
+to the full-scale run, the downstream analysis and the mathematical derivations,
+see [`report.pdf`](report.pdf).
+
+Both documents assume a **complete z-score matrix**, every phenotype measured at
+every SNP. The code here also implements the sparse case, where a phenotype may
+be missing at a SNP, but no result from that pipeline appears in either
+document. See [Where to start](#where-to-start).
 
 **Headline results** (full-scale run, all 1,010 phenotypes):
 
@@ -142,8 +148,8 @@ Two independent, parallel pipeline implementations, depending on whether your
 z score matrix has missing entries:
 
 - `sparse_zscore_matrix/`: for real data with missing z scores. Pairwise
-  complete throughout. This is the more actively maintained implementation;
-  see its `READ_FIRST.md` for the order to run things in, and its
+  complete throughout. The more actively maintained implementation, though
+  neither the article nor the report reports any result from it;
   `script_descriptions.md` for a detailed walkthrough of what each script
   actually computes and how, phenotype by phenotype and stage by stage,
   beyond just the run order.
